@@ -2,6 +2,9 @@
 # Ignore content from ny_taxi_postgres_data
 ny_taxi_postgres_data/
 
+# Ignore .terraform directories
+.terraform/
+
 # Ignore content from keys folder
 keys/       
 
