@@ -1,0 +1,153 @@
+
+--------------------------
+
+# Cria a imagem com python instalado e pandas também (ver Dockerfile)
+docker build -t test:pandas .
+
+# Executa a imagem (abrirá no bash)
+docker run -it test:pandas
+
+# Última versão (abrirá no Python - ver Dockerfile)
+docker build -t test:pandas ./01_docker
+
+# Roda o pipeline com argumento data
+docker run -it test:pandas 2025-09-14
+
+---------------------------
+
+# cria o banco no docker (por algum motivo, s)
+docker run -it \
+    -e POSTGRES_USER="root" \
+    -e POSTGRES_PASSWORD="root" \
+    -e POSTGRES_DB="ny_taxi" \
+    -v C:/Users/elton.junior_amaris/Desktop/ej_de_zoomcamp/ny_taxi_postgres_data:/var/lib/postgresql/data \
+    -p 5432:5432 \
+    postgres:13
+
+# Após subir o container, podemos acessá-lo via pgcli (biblioteca python) assim:
+
+pgcli -h localhost -p 5432 -u root -d ny_taxi 
+(pedirá a senha: root)
+
+--------------------
+
+# NETWORKS E PGADMIN
+
+# Pgadmin é uma melhor forma de interagir com o banco, um gerenciador de bancos.
+# vamos criar uma rede (network) para que os containers (do banco e do gerenciador pgadmin)
+# possam se comunicar / se ver
+
+-- Cria a rede pg-network
+ docker network create pg-network
+
+-- (Re) Cria o container do banco atrelando a rede e dando um nome (pg-database)
+ docker run -it \
+    -e POSTGRES_USER="root" \
+    -e POSTGRES_PASSWORD="root" \
+    -e POSTGRES_DB="ny_taxi" \
+    -v C:/Users/elton.junior_amaris/Desktop/ej_de_zoomcamp/ny_taxi_postgres_data:/var/lib/postgresql/data \
+    -p 5432:5432 \
+    --network=-network \
+    --name=pg-database \
+    postgres:13
+
+-- Cria o container do pgamin 
+
+docker run -it \
+    -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+    -e PGADMIN_DEFAULT_PASSWORD="root" \
+    -p 8080:80 \
+    --network=pg-network \
+    --name pg-admin \
+    dpage/pgadmin4 
+
+--- ACESSAR O BANCO PELO PGADMIN
+
+-- Com os containers ativos, entrar no browser o endereço do pgadmin (http://localhost:8080/)
+-- fazer login com o email e senha e, depois, conectar no container do banco atravé de seu nome no campo host (pg-database)
+-- mais as infos de usuario, senha, porta, etc.
+
+
+--------------------------------------------------
+
+#### RODAR O SCRIPT DE INGESTÂO (Local)
+
+python .\02_ingest_data\ingest_data.py \
+    --user=root \
+    --password=root \
+    --host=localhost \
+    --port=5432 \
+    --db=ny_taxi \
+    --table_name=yellow_taxi_trips \
+    --url=https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet
+
+-- ingere 3M de linhas desse mês (202301)
+
+-------------------------------------------------
+
+
+#### RODAR O SCRIPT DE INGESTÂO (de um container)
+
+-- Criar a dockerfile (na pasta 02_ingest_data atualizando os parâmetros)
+--- buildar a imagen
+
+docker build -t taxi_ingest_data:v0 .
+(rodar de entro da pasta)
+
+-- Criar o container
+
+docker run -it taxi_ingest_data:v0 \
+    --user=root \
+    --password=root \
+    --host=localhost \
+    --port=5432 \
+    --db=ny_taxi \
+    --table_name=yellow_taxi_trips \
+    --url=https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2021-01.parquet
+
+(vai appendar os dados de 202101 com os de 202301 que já estão no banco - rodado local)
+(na real, está sobrescrevendo, talvez seja propriedade do container, ou b.o no sql mesmo, precisa testar)
+
+
+
+-----------------------------------------
+
+
+### DOCKER COMPOSE
+
+-- Cria múltiplos containers de uma vez só via .yaml (já associando a uma network default)
+
+-- Crias o docker-compose.yaml (ver na pasta - raiz do projeto) e rodar: (boa opção)
+
+docker-compose up -d
+
+docker-compose down (desliga)
+
+
+----------------------------------------------
+
+####  -------------- TERRAFORM ---------------
+
+# Depois de criar a service account no Google
+# Criar o arquivo main.tf com o provider (Google, nesse caso)
+terraform init
+
+# Adicionei o script pra criar o bucket
+# plan cria a "receita" para o provider ("google")
+terraform plan
+
+# Aplicar a "receita" / criar o bucket
+terraform apply
+
+# "Destrói" / deleta os recursos
+terraform apply
+
+
+
+
+########################
+---------- CONECTAR NA VM Google
+
+-- Depois de criar a senha no gcp e baixar
+-- No bash: (user@extenal.ip = elton@35.246.83.185, ip variável ao subir outra instancia)
+ssh -i ~/.ssh/key_gcp_de elton@35.246.83.185

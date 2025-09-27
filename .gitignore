@@ -1,0 +1,22 @@
+
+# Ignore content from ny_taxi_postgres_data
+ny_taxi_postgres_data/
+
+# Ignore content from keys folder
+keys/       
+
+# Ignore Mac system files
+.DS_Store   
+# Ignore Python cache files
+__pycache__/   
+*.py[cod]
+# Ignore Jupyter Notebook checkpoints   
+.ipynb_checkpoints/ 
+# Ignore environment files
+.env    
+.venv/
+env/
+
+# Ignore log files
+*.log
+
